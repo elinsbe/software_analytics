@@ -115,29 +115,35 @@ def extract_ai(all_commits, ai_commits):
     return df2_ai
 
 
+def extract_data(url_repo, repo):
+
+    # Here Pydriller gets EVERY commit in the history of the repo
+    repo_commits = get_all_commits_from_repo(url_repo=url_repo)
+    # Get the AI-commits from the data set
+    ai_commits = get_ai_commits(repo)
+    # find max/min dates
+    start_date, end_date = get_timeframe(
+        repo_commits=repo_commits, ai_commits=ai_commits
+    )
+    # filter so we only have the relevant commits in the same timeframe
+    repo_commits = repo_commits[
+        (repo_commits["date"] >= start_date - pd.Timedelta(days=1))
+        & (repo_commits["date"] <= end_date + pd.Timedelta(days=1))
+    ]
+    # Add to see if it was reverted
+    df_original_dataset = add_reverts(repo_commits, url_repo=url_repo)
+
+    df_no_ai = extract_non_ai(df_original_dataset, ai_commits)
+    df_ai = extract_ai(df_original_dataset, ai_commits)
+
+    print(f"Ratio: {len(df_ai / df_no_ai)}")
+
+    df_original_dataset.to_csv(f"csv/ts/{repo.split('/')[-1]}_no_ai_with_outliers.csv")
+    df_ai.to_csv(f"csv/ts/{repo}_ai_with_outliers.csv")
+
+
 if __name__ == "__main__":
     # add /change to change analysis repo
     for url_repo in url_repos:
         repo = f"{url_repo.split('/')[-2]}/{url_repo.split('/')[-1]}"
-
-        # Here Pydriller gets EVERY commit in the history of the repo
-        repo_commits = get_all_commits_from_repo(url_repo=url_repo)
-        # Get the AI-commits from the data set
-        ai_commits = get_ai_commits(repo)
-        # find max/min dates
-        start_date, end_date = get_timeframe(
-            repo_commits=repo_commits, ai_commits=ai_commits
-        )
-        # filter so we only have the relevant commits in the same timeframe
-        repo_commits = repo_commits[
-            (repo_commits["date"] >= start_date - pd.Timedelta(days=1))
-            & (repo_commits["date"] <= end_date + pd.Timedelta(days=1))
-        ]
-        # Add to see if it was reverted
-        df_original_dataset = add_reverts(repo_commits, url_repo=url_repo)
-
-        df_no_ai = extract_non_ai(df_original_dataset, ai_commits)
-        df_ai = extract_ai(df_original_dataset, ai_commits)
-
-        df_original_dataset.to_csv("no_ai_with_outliers.csv")
-        df_ai.to_csv("ai_with_outliers.csv")
+        extract_data(url_repo, repo)
