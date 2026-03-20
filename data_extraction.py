@@ -1,7 +1,7 @@
 import pandas as pd
 from pydriller import Repository
-from datetime import datetime, timedelta
 import re
+import remove_outliers
 import os
 
 LANGAUGE = "ts"
@@ -9,6 +9,7 @@ FULL_REPO = "pancakeswap/pancake-frontend"
 REPO = "pancake-frontend"
 
 url_repos = ["https://github.com/pancakeswap/pancake-frontend"]
+COLUMNS = ["files", "insertions", "deletions", "lines"]
 
 
 def get_ai_commits(repo_name: str):
@@ -104,7 +105,7 @@ def extract_non_ai(all_commits, ai_commits):
 def extract_ai(all_commits, ai_commits):
     print("Extract AI commits")
     merged = all_commits.merge(
-        ai_commits, left_on="hash", right_on="commit_id", how="left", indicator=False
+        ai_commits, left_on="hash", right_on="commit_id", how="left", indicator=True
     )
 
     df2_ai = merged[merged["_merge"] == "both"]
@@ -136,14 +137,27 @@ def extract_data(url_repo, repo):
     df_no_ai = extract_non_ai(df_original_dataset, ai_commits)
     df_ai = extract_ai(df_original_dataset, ai_commits)
 
-    print(f"Ratio: {len(df_ai / df_no_ai)}")
+    print(f"Ratio: {len(df_ai) / len(df_no_ai)}")
+    no_ai_path = f"csv/{LANGAUGE}/{repo.split('/')[-1]}/no_ai_with_outliers.csv"
+    ai_path = f"csv/{LANGAUGE}/{repo.split('/')[-1]}/ai_with_outliers.csv"
 
-    df_original_dataset.to_csv(f"csv/ts/{repo.split('/')[-1]}_no_ai_with_outliers.csv")
-    df_ai.to_csv(f"csv/ts/{repo}_ai_with_outliers.csv")
+    df_original_dataset.to_csv(no_ai_path)
+    df_ai.to_csv(ai_path)
+    return no_ai_path, ai_path
 
 
 if __name__ == "__main__":
     # add /change to change analysis repo
     for url_repo in url_repos:
+        if not os.path.exists(f"csv/{LANGAUGE}/{url_repo.split('/')[-1]}"):
+            print("Making directory path...")
+            os.makedirs(f"csv/{LANGAUGE}/{url_repo.split('/')[-1]}")
         repo = f"{url_repo.split('/')[-2]}/{url_repo.split('/')[-1]}"
-        extract_data(url_repo, repo)
+        no_ai_path, ai_path = extract_data(url_repo, repo)
+        print("Extracting date done. Removing outliers...")
+        remove_outliers.main(
+            ai_input_path=ai_path,
+            non_ai_input_path=no_ai_path,
+            repo=repo.split("/")[-1],
+            language=LANGAUGE,
+        )

@@ -31,7 +31,6 @@ def plot_distributions(df, title):
     fig, axes = plt.subplots(2, len(COLUMNS), figsize=(16, 6))
 
     for i, col in enumerate(COLUMNS):
-
         # Histogram
         df[col].hist(ax=axes[0, i], bins=50)
         axes[0, i].set_title(f"{col} histogram")
@@ -48,11 +47,11 @@ def plot_distributions(df, title):
     plt.show()
 
 
-def main():
-    
+def main(ai_input_path, non_ai_input_path, repo, language):
+
     # AI
 
-    input_path = Path("csv/ts/pancake-frontend_AI_in_timeframe.csv")
+    input_path = Path(ai_input_path)
     df = pd.read_csv(input_path)
 
     print("Original dataset:", len(df), "rows")
@@ -74,16 +73,16 @@ def main():
     plot_distributions(cleaned, "After Outlier Removal AI")
 
     # save results
-    cleaned.to_csv("csv/ts/cleaned_dataset_AI.csv", index=False)
-    outliers.to_csv("csv/ts/removed_outliers_AI.csv", index=False)
+    cleaned.to_csv(f"csv/{language}/{repo}/cleaned_dataset_AI.csv", index=False)
+    outliers.to_csv(f"csv/{language}/{repo}/removed_outliers_AI.csv", index=False)
 
     print("\nSaved:")
-    print("csv/ts/cleaned_dataset_AI.csv")
-    print("csv/ts/removed_outliers_AI.csv")
-    
+    print(f"csv/{language}/{repo}/cleaned_dataset_AI.csv")
+    print(f"csv/{language}/{repo}/removed_outliers_AI.csv")
+
     # non-AI
-    
-    input_path = Path("csv/ts/pancake-frontend_AI_removed_in_timeframe.csv")
+
+    input_path = Path(non_ai_input_path)
     df = pd.read_csv(input_path)
 
     print("Original dataset:", len(df), "rows")
@@ -104,13 +103,13 @@ def main():
     # visualize after
     plot_distributions(cleaned, "After Outlier Removal non-AI")
 
-    # save results
-    cleaned.to_csv("csv/ts/cleaned_dataset_nonAI.csv", index=False)
-    outliers.to_csv("csv/ts/removed_outliers_nonAI.csv", index=False)
+    # save resul{language}
+    cleaned.to_csv(f"csv/{language}/{repo}/cleaned_dataset_nonAI.csv", index=False)
+    outliers.to_csv(f"csv/{language}/{repo}/removed_outliers_nonAI.csv", index=False)
 
     print("\nSaved:")
-    print("csv/ts/cleaned_dataset_nonAI.csv")
-    print("csv/ts/removed_outliers_nonAI.csv")
+    print(f"csv/{language}/{repo}/cleaned_dataset_nonAI.csv")
+    print(f"csv/{language}/{repo}/removed_outliers_nonAI.csv")
 
 
 if __name__ == "__main__":
