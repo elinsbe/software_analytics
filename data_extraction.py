@@ -1,8 +1,12 @@
+from datetime import timedelta
 import pandas as pd
 from pydriller import Repository
 import re
 import remove_outliers
 import os
+import tempfile
+import git
+
 
 LANGAUGE = "ts"
 FULL_REPO = "pancakeswap/pancake-frontend"
@@ -31,11 +35,13 @@ def get_ai_commits(repo_name: str):
     return df
 
 
-def get_all_commits_from_repo(url_repo):
+def get_all_commits_from_repo(url_repo, start_date, end_date):
     print(f"Getting all commits from online repo for {url_repo}")
     rows = []
 
-    for commit in Repository(url_repo).traverse_commits():
+    for commit in Repository(
+        url_repo, since=start_date, to=end_date
+    ).traverse_commits():
         rows.append(
             {
                 "hash": commit.hash,
@@ -73,21 +79,6 @@ def add_reverts(df, url_repo):
     return df
 
 
-def get_timeframe(repo_commits, ai_commits):
-    print("Getting start and end date!")
-    df = ai_commits.merge(
-        repo_commits, left_on="commit_id", right_on="hash", how="inner"
-    )
-    df["date"] = pd.to_datetime(df["date"], utc=True)
-    start_date = df["date"].min()
-    end_date = df["date"].max()
-
-    print("Min date:", df["date"].min())
-    print("Max date:", df["date"].max())
-
-    return start_date, end_date
-
-
 def extract_non_ai(all_commits, ai_commits):
     merged = all_commits.merge(
         ai_commits, left_on="hash", right_on="commit_id", how="left", indicator=True
@@ -118,19 +109,49 @@ def extract_ai(all_commits, ai_commits):
 
 def extract_data(url_repo, repo):
 
-    # Here Pydriller gets EVERY commit in the history of the repo
-    repo_commits = get_all_commits_from_repo(url_repo=url_repo)
-    # Get the AI-commits from the data set
-    ai_commits = get_ai_commits(repo)
-    # find max/min dates
-    start_date, end_date = get_timeframe(
-        repo_commits=repo_commits, ai_commits=ai_commits
+    df_final["changes_in_30_days"] = (
+        df_final["changes_in_30_days"].fillna(0).astype(int)
     )
-    # filter so we only have the relevant commits in the same timeframe
-    repo_commits = repo_commits[
-        (repo_commits["date"] >= start_date - pd.Timedelta(days=1))
-        & (repo_commits["date"] <= end_date + pd.Timedelta(days=1))
-    ]
+
+    print("Complete!")
+    return df_final
+
+
+def get_dates(url_repo, df):
+    print("Cloning repo in temp directory")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        repo = git.Repo.clone_from(
+            url_repo, temp_dir, multi_options=["--filter=blob:none", "--no-checkout"]
+        )
+        print(f"Cloned in {temp_dir}")
+
+        hashes = df["commit_id"].dropna().astype(str).tolist()
+        if not hashes:
+            return None, None
+
+        # Get only dates
+        print("Getting dates!")
+        output = repo.git.show(hashes, s=True, format="%ci")
+
+        dates = pd.to_datetime(output.splitlines(), utc=True)
+
+        start = dates.min()
+        end = dates.max()
+
+        print(f"Earliest date: {start}")
+        print(f"Latest date: {end}")
+
+        return start, end
+
+
+def extract_data(url_repo, repo):
+    ai_commits = get_ai_commits(repo)
+    start_date, end_date = get_dates(url_repo=url_repo, df=ai_commits)
+    # find max/min dates
+    repo_commits = get_all_commits_from_repo(
+        url_repo=url_repo, start_date=start_date, end_date=end_date
+    )
+
     # Add to see if it was reverted
     df_original_dataset = add_reverts(repo_commits, url_repo=url_repo)
 
@@ -138,8 +159,8 @@ def extract_data(url_repo, repo):
     df_ai = extract_ai(df_original_dataset, ai_commits)
 
     print(f"Ratio: {len(df_ai) / len(df_no_ai)}")
-    no_ai_path = f"csv/{LANGAUGE}/{repo.split('/')[-1]}/no_ai_with_outliers.csv"
-    ai_path = f"csv/{LANGAUGE}/{repo.split('/')[-1]}/ai_with_outliers.csv"
+    no_ai_path = f"csv/{LANGAUGE}/{repo.split('/')[-1]}/with_outliers_no_ai.csv"
+    ai_path = f"csv/{LANGAUGE}/{repo.split('/')[-1]}/with_outliers_ai.csv"
 
     df_original_dataset.to_csv(no_ai_path)
     df_ai.to_csv(ai_path)
