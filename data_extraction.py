@@ -58,22 +58,22 @@ def get_all_commits_from_repo(url_repo, start_date, end_date):
     return df
 
 
-def add_reverts(df, url_repo):
+def add_reverts(df, url_repo, start_date, end_date):
     print("Adding revert field!")
 
     hashes_set = set(df["hash"])
     reverted_commits = set()
 
-    for commit in Repository(url_repo).traverse_commits():
+    for commit in Repository(
+        url_repo, since=start_date, to=end_date
+    ).traverse_commits():
         if "reverts commit" in (commit.msg or "").lower():
             match = re.search(r"reverts commit (\w+)", commit.msg, re.IGNORECASE)
             if match:
                 reverted_hash = match.group(1)
                 if reverted_hash in hashes_set:
                     reverted_commits.add(reverted_hash)
-
-    # Add column instead of replacing dataframe
-    df["is_reverted"] = df["hash"].isin(reverted_commits)
+    df["is_reverted"] = df["hash"].isin(reverted_commits).astype(int)
 
     print("Complete!")
     return df
@@ -107,7 +107,62 @@ def extract_ai(all_commits, ai_commits):
     return df2_ai
 
 
-def extract_data(url_repo, repo):
+def changes_after_30_days(df_old, url_repo, start_date, end_date):
+    print("Add number of changes in 30 days!")
+
+    function_data = {}
+    valid_hashes = set(df_old["hash"])
+
+    for commit in Repository(
+        url_repo, since=start_date, to=end_date
+    ).traverse_commits():
+        if commit.hash not in valid_hashes:
+            continue
+
+        for mod in commit.modified_files:
+            if not mod.new_path or not mod.methods:
+                continue
+
+            for m in mod.methods:
+                name = (m.name or "").strip().lower()
+
+                if (
+                    not name
+                    or name == "<anonymous>"
+                    or name == "anonymous"
+                    or "lambda" in name
+                    or "=>" in name
+                ):
+                    continue
+
+                key = (commit.hash, mod.new_path, m.name)
+
+                if key not in function_data:
+                    function_data[key] = {
+                        "hash": commit.hash,
+                        "start_date": commit.author_date,
+                        "changes": 0,
+                    }
+
+                start = function_data[key]["start_date"]
+
+                if commit.author_date <= start + timedelta(days=30):
+                    function_data[key]["changes"] += 1
+
+    df = pd.DataFrame(function_data.values())
+
+    if df.empty:
+        df_old["changes_in_30_days"] = 0
+        return df_old
+
+    df_changes = (
+        df.groupby("hash")["changes"]
+        .sum()
+        .reset_index()
+        .rename(columns={"changes": "changes_in_30_days"})
+    )
+
+    df_final = df_old.merge(df_changes, on="hash", how="left")
 
     df_final["changes_in_30_days"] = (
         df_final["changes_in_30_days"].fillna(0).astype(int)
@@ -153,10 +208,19 @@ def extract_data(url_repo, repo):
     )
 
     # Add to see if it was reverted
-    df_original_dataset = add_reverts(repo_commits, url_repo=url_repo)
+    df_original_dataset = add_reverts(
+        repo_commits, url_repo=url_repo, start_date=start_date, end_date=end_date
+    )
 
     df_no_ai = extract_non_ai(df_original_dataset, ai_commits)
     df_ai = extract_ai(df_original_dataset, ai_commits)
+
+    df_no_ai = changes_after_30_days(
+        df_old=df_no_ai, url_repo=url_repo, start_date=start_date, end_date=end_date
+    )
+    df_ai = changes_after_30_days(
+        df_old=df_ai, url_repo=url_repo, start_date=start_date, end_date=end_date
+    )
 
     print(f"Ratio: {len(df_ai) / len(df_no_ai)}")
     no_ai_path = f"csv/{LANGAUGE}/{repo.split('/')[-1]}/with_outliers_no_ai.csv"
@@ -176,6 +240,7 @@ if __name__ == "__main__":
         repo = f"{url_repo.split('/')[-2]}/{url_repo.split('/')[-1]}"
         no_ai_path, ai_path = extract_data(url_repo, repo)
         print("Extracting date done. Removing outliers...")
+
         remove_outliers.main(
             ai_input_path=ai_path,
             non_ai_input_path=no_ai_path,
