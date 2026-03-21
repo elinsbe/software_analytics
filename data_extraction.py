@@ -211,16 +211,15 @@ def extract_data(url_repo, repo):
     df_original_dataset = add_reverts(
         repo_commits, url_repo=url_repo, start_date=start_date, end_date=end_date
     )
+    df_original_dataset = changes_after_30_days(
+        df_old=df_original_dataset,
+        url_repo=url_repo,
+        start_date=start_date,
+        end_date=end_date,
+    )
 
     df_no_ai = extract_non_ai(df_original_dataset, ai_commits)
     df_ai = extract_ai(df_original_dataset, ai_commits)
-
-    df_no_ai = changes_after_30_days(
-        df_old=df_no_ai, url_repo=url_repo, start_date=start_date, end_date=end_date
-    )
-    df_ai = changes_after_30_days(
-        df_old=df_ai, url_repo=url_repo, start_date=start_date, end_date=end_date
-    )
 
     print(f"Ratio: {len(df_ai) / len(df_no_ai)}")
     no_ai_path = f"csv/{LANGAUGE}/{repo.split('/')[-1]}/with_outliers_no_ai.csv"
