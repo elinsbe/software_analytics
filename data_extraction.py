@@ -6,7 +6,9 @@ import remove_outliers
 import os
 import tempfile
 import git
-
+from github import Github, Auth
+from dotenv import load_dotenv
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 LANGAUGE = "ts"
 FULL_REPO = "pancakeswap/pancake-frontend"
@@ -105,6 +107,45 @@ def extract_ai(all_commits, ai_commits):
     )
     print("Complete!")
     return df2_ai
+
+
+def annotate_failed_pipelines(
+    df,
+    repo_name,
+    max_workers=10,
+):
+    print("Calculate failed pipelines")
+    load_dotenv()
+    token = os.getenv("GITHUB_TOKEN")
+    auth = Auth.Token(token)
+    g = Github(auth=auth)
+
+    df_commits = df
+    repo = g.get_repo(repo_name)
+
+    def check_failed(commit_sha):
+        try:
+            runs = repo.get_workflow_runs(head_sha=commit_sha)
+            for run in runs:
+                if run.conclusion == "failure":
+                    return commit_sha, True
+            return commit_sha, False
+        except Exception as e:
+            print(f"Error checking commit {commit_sha}: {e}")
+            return commit_sha, False
+
+    results = []
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        future_to_sha = {
+            executor.submit(check_failed, sha): sha for sha in df_commits["hash"]
+        }
+        for future in as_completed(future_to_sha):
+            results.append(future.result())
+    df_results = pd.DataFrame(results, columns=["hash", "failed_pipeline"])
+    df_commits = df_commits.merge(df_results, on="hash", how="left")
+    print("Completed")
+
+    return df_commits
 
 
 def changes_after_30_days(df_old, url_repo, start_date, end_date):
@@ -211,6 +252,11 @@ def extract_data(url_repo, repo):
     df_original_dataset = add_reverts(
         repo_commits, url_repo=url_repo, start_date=start_date, end_date=end_date
     )
+
+    df_original_dataset = annotate_failed_pipelines(
+        df=df_original_dataset, repo_name=repo
+    )
+
     df_original_dataset = changes_after_30_days(
         df_old=df_original_dataset,
         url_repo=url_repo,
