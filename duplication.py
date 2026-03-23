@@ -1,9 +1,9 @@
 import pandas as pd
 import subprocess
-import os
 import json
 import tempfile
 import git
+import os
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 from pydriller import Repository
@@ -28,8 +28,6 @@ def code_duplication(df, url_repo, max_workers=None):
     print("Running duplication analysis (changed files only)...")
 
     if max_workers is None:
-        import os
-
         max_workers = min(8, os.cpu_count() or 4)
 
     hashes = df["hash"].tolist()
