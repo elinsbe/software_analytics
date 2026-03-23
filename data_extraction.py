@@ -16,6 +16,18 @@ FULL_REPO = "pancakeswap/pancake-frontend"
 REPO = "pancake-frontend"
 
 url_repos = ["https://github.com/pancakeswap/pancake-frontend"]
+FINAL_COLUMNS = [
+    "hash",
+    "date",
+    "files",
+    "deletions",
+    "insertions",
+    "lines",
+    "is_reverted",
+    "failed_pipeline",
+    "changes_in_30_days",
+    "duplication_percentage",
+]
 
 
 def get_ai_commits(repo_name: str):
@@ -79,35 +91,6 @@ def add_reverts(df, url_repo, start_date, end_date):
 
     print("Complete!")
     return df
-
-
-def extract_non_ai(all_commits, ai_commits):
-    merged = all_commits.merge(
-        ai_commits, left_on="hash", right_on="commit_id", how="left", indicator=True
-    )
-
-    df2_unmatched = merged[merged["_merge"] == "left_only"]
-    df2_unmatched = df2_unmatched.drop(
-        columns=["_merge", "programming_language", "repo_name", "commit_id", "tool"]
-    )
-    df2_unmatched = merged[merged["_merge"] == "left_only"]
-
-    print(f"Number of lines in NON AI, within timeframe! {len(df2_unmatched)}")
-    return df2_unmatched
-
-
-def extract_ai(all_commits, ai_commits):
-    print("Extract AI commits")
-    merged = all_commits.merge(
-        ai_commits, left_on="hash", right_on="commit_id", how="left", indicator=True
-    )
-
-    df2_ai = merged[merged["_merge"] == "both"]
-    df2_ai = df2_ai.drop(
-        columns=["_merge", "programming_language", "repo_name", "commit_id", "tool"]
-    )
-    print("Complete!")
-    return df2_ai
 
 
 def annotate_failed_pipelines(
@@ -269,15 +252,33 @@ def extract_data(url_repo, repo):
         url_repo=url_repo,
     )
 
-    df_no_ai = extract_non_ai(df_original_dataset, ai_commits)
-    df_ai = extract_ai(df_original_dataset, ai_commits)
+    # Ensure matching types and strip whitespace
+    df_original_dataset["hash"] = df_original_dataset["hash"].astype(str).str.strip()
+    ai_commits["commit_id"] = ai_commits["commit_id"].astype(str).str.strip()
 
-    print(f"Ratio: {len(df_ai) / len(df_no_ai)}")
+    # Extract non-AI commits
+    df_no_ai = df_original_dataset[
+        ~df_original_dataset["hash"].isin(ai_commits["commit_id"])
+    ].copy()
+
+    # Extract AI commits for completeness
+    df_ai = df_original_dataset[
+        df_original_dataset["hash"].isin(ai_commits["commit_id"])
+    ].copy()
+
+    print(f"Number of non-AI commits: {len(df_no_ai)}, AI commits: {len(df_ai)}")
+    print(f"Ratio: {len(df_ai) / len(df_no_ai) if len(df_no_ai) > 0 else 'N/A'}")
+
     no_ai_path = f"csv/{LANGAUGE}/{repo.split('/')[-1]}/with_outliers_no_ai.csv"
     ai_path = f"csv/{LANGAUGE}/{repo.split('/')[-1]}/with_outliers_ai.csv"
 
-    df_original_dataset.to_csv(no_ai_path)
-    df_ai.to_csv(ai_path)
+    df_no_ai = df_no_ai[FINAL_COLUMNS].copy()
+    df_ai = df_ai[FINAL_COLUMNS].copy()
+
+    # Save the filtered DataFrames
+    df_no_ai.to_csv(no_ai_path, index=False)
+    df_ai.to_csv(ai_path, index=False)
+
     return no_ai_path, ai_path
 
 
