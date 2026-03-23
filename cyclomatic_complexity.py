@@ -2,7 +2,7 @@ import subprocess
 import pandas as pd
 import numpy as np
 
-DATASET_PATH = "reports/cleaned_dataset_nonAI.csv" 
+DATASET_PATH = "reports/pancake-frontend/cleaned_dataset_nonAI.csv" 
 OUTPUT_PATH = "cc_results_nonAI.csv"
 
 INCLUDE_EXT = ".ts"
