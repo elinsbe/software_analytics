@@ -1,0 +1,36 @@
+Mean_value of AI for average lines changed: 228.5
+Mean_value of NON AI for average lines changed: 60.78504672897196
+
+ 
+Ratio of insertion/deletion for AI: 45.3638913036479
+Ratio of insertion/deletion for NON AI: 6.703745412874145
+
+ 
+Average for insertions for AI: 215.19230769230768
+Average of insertions for NON AI: 54.12149532710281
+
+ 
+Average for deletions for AI: 13.307692307692308
+Average of deletions for NON AI: 6.663551401869159
+
+ 
+Number of reverted commits (AI): 0
+Number of reverted commits (non-AI): 0
+
+ 
+Number of failed pipelines (AI): 0
+Number of failed pipelines (non-AI): 0
+
+ 
+Mean_value of AI for # of changes in 30 days: 7.6923076923076925
+Mean_value of non AI for # of changes in 30 days: 6.177570093457944
+
+ 
+Mean value of code duplication for AI: 0.0
+Mean value of code duplication for non-AI: 0.0
+
+ 
+Mean_value of AI for files changed: 1.9615384615384615
+Mean_value of NON AI for files changed: 60.78504672897196
+
+ 
