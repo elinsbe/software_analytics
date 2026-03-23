@@ -2,49 +2,63 @@ import pandas as pd
 import subprocess
 import os
 import json
+import tempfile
+import git
 
-# Load hashes
-df = pd.read_csv("reports/cleaned_dataset_nonAI.csv")
 
-results = []
+def code_duplication(df, url_repo):
+    print("Cloning repo in temp directory...")
 
-for commit in df["hash"]:
+    results = []
 
-    print(f"Processing {commit}")
+    with tempfile.TemporaryDirectory() as temp_dir:
+        repo = git.Repo.clone_from(
+            url_repo, temp_dir, multi_options=["--filter=blob:none"]
+        )
 
-    # Checkout commit
-    subprocess.run(["git", "checkout", commit], check=True)
+        for commit in df["hash"]:
+            print(f"Processing {commit}")
 
-    # Run jscpd (TypeScript only)
-    subprocess.run([
-        "npx", "jscpd", ".",
-        "--reporters", "json",
-        "--output", "reports",
-        "--pattern", "**/*.ts"
-    ], check=True)
+            try:
+                # Checkout commit inside repo
+                subprocess.run(["git", "checkout", commit], cwd=temp_dir, check=True)
 
-    # Path to report
-    report_path = "reports/jscpd-report.json"
+                # Run jscpd
+                subprocess.run(
+                    [
+                        "npx",
+                        "jscpd",
+                        ".",
+                        "--reporters",
+                        "json",
+                        "--output",
+                        "reports",
+                        "--pattern",
+                        "**/*.ts",
+                    ],
+                    cwd=temp_dir,
+                    check=True,
+                )
 
-    duplication = None
+                report_path = os.path.join(temp_dir, "reports/jscpd-report.json")
+                duplication = None
 
-    if os.path.exists(report_path):
-        with open(report_path, "r") as f:
-            data = json.load(f)
+                if os.path.exists(report_path):
+                    with open(report_path, "r") as f:
+                        data = json.load(f)
+                    duplication = data["statistics"]["total"]["percentage"]
 
-        # Extract total duplication percentage
-        duplication = data["statistics"]["total"]["percentage"]
+                results.append({"hash": commit, "duplication_percentage": duplication})
 
-    results.append({
-        "hash": commit,
-        "duplication_percentage": duplication
-    })
+            except subprocess.CalledProcessError:
+                print(f"Failed on commit {commit}")
+                results.append({"hash": commit, "duplication_percentage": None})
 
-# Return to main branch
-subprocess.run(["git", "checkout", "develop"], check=True)
+        # Optional: return to branch
+        subprocess.run(["git", "checkout", "develop"], cwd=temp_dir, check=False)
 
-# Save results
-output_df = pd.DataFrame(results)
-output_df.to_csv("per_commit_duplication_nonAI.csv", index=False)
-
-print("Saved to per_commit_duplication_nonAI.csv")
+    # Save results
+    output_df = pd.DataFrame(results)
+    df_final = df.merge(output_df, on="hash", how="left")
+    print("Completed!")
+    return df_final

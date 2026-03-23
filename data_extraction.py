@@ -9,13 +9,13 @@ import git
 from github import Github, Auth
 from dotenv import load_dotenv
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import duplication
 
 LANGAUGE = "ts"
 FULL_REPO = "pancakeswap/pancake-frontend"
 REPO = "pancake-frontend"
 
 url_repos = ["https://github.com/pancakeswap/pancake-frontend"]
-COLUMNS = ["files", "insertions", "deletions", "lines"]
 
 
 def get_ai_commits(repo_name: str):
@@ -90,6 +90,7 @@ def extract_non_ai(all_commits, ai_commits):
     df2_unmatched = df2_unmatched.drop(
         columns=["_merge", "programming_language", "repo_name", "commit_id", "tool"]
     )
+    df2_unmatched = merged[merged["_merge"] == "left_only"]
 
     print(f"Number of lines in NON AI, within timeframe! {len(df2_unmatched)}")
     return df2_unmatched
@@ -262,6 +263,9 @@ def extract_data(url_repo, repo):
         url_repo=url_repo,
         start_date=start_date,
         end_date=end_date,
+    )
+    df_original_dataset = duplication.code_duplication(
+        df=df_original_dataset, url_repo=url_repo
     )
 
     df_no_ai = extract_non_ai(df_original_dataset, ai_commits)
