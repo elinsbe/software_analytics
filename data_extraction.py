@@ -265,7 +265,8 @@ def extract_data(url_repo, repo):
         end_date=end_date,
     )
     df_original_dataset = duplication.code_duplication(
-        df=df_original_dataset, url_repo=url_repo
+        df=df_original_dataset,
+        url_repo=url_repo,
     )
 
     df_no_ai = extract_non_ai(df_original_dataset, ai_commits)
