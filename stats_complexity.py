@@ -63,18 +63,18 @@ results.append({
 })
 
 # Cyclomatic Complexity
-# cc_ai = pd.read_csv("csv/ts/pancake-frontend/cc_results_AI.csv")
-# cc_non_ai = pd.read_csv("csv/ts/pancake-frontend/cc_results_nonAI.csv")
+cc_ai = pd.read_csv("csv/ts/pancake-frontend/cc_results_AI.csv")
+cc_non_ai = pd.read_csv("csv/ts/pancake-frontend/cc_results_nonAI.csv")
 
-# for metric in ["delta_cc", "delta_cc_norm"]:
-#     stat, p = mannwhitneyu(cc_ai[metric], cc_non_ai[metric], alternative="two-sided")
-#     delta = cliffs_delta(cc_ai[metric], cc_non_ai[metric])
-#     results.append({
-#         "metric": f"cyclomatic_complexity_{metric}",
-#         "U": stat,
-#         "p_value": p,
-#         "cliffs_delta": delta
-#     })
+for metric in ["delta_cc", "delta_cc_norm"]:
+    stat, p = mannwhitneyu(cc_ai[metric], cc_non_ai[metric], alternative="two-sided")
+    delta = cliffs_delta(cc_ai[metric], cc_non_ai[metric])
+    results.append({
+        "metric": f"cyclomatic_complexity_{metric}",
+        "U": stat,
+        "p_value": p,
+        "cliffs_delta": delta
+    })
 
 results_df = pd.DataFrame(results)
 results_df.to_csv("csv/ts/pancake-frontend/statistical_results_complexity.csv", index=False)
