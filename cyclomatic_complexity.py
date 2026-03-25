@@ -7,12 +7,13 @@ import os
 
 # use cleaned_dataset_AI.csv to get results for the AI commits
 # use cleaned_dataset_nonAI.csv to get results for the human-written commits
-DATASET_PATH = "csv/ts/pancake-frontend/cleaned_dataset_AI.csv"
-OUTPUT_PATH = "csv/ts/pancake-frontend/cc_results_AI.csv"
-REPO_URL = "https://github.com/pancakeswap/pancake-frontend"
+DATASET_PATH = "csv/cs/Chatdollkit/cleaned_dataset_AI.csv"
+OUTPUT_PATH = "csv/cs/Chatdollkit/cc_results_AI.csv"
+# REPO_URL = "https://github.com/pancakeswap/pancake-frontend"
+REPO_URL = "https://github.com/uezo/ChatdollKit"
 
-INCLUDE_EXT = ".ts"
-EXCLUDE_PATTERNS = [".test.ts", ".d.ts"]
+INCLUDE_EXT = ".cs"
+EXCLUDE_PATTERNS = [".test.cs", ".d.cs"]
 
 
 def run_cmd(cmd, cwd=None):

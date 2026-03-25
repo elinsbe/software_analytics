@@ -15,8 +15,8 @@ def cliffs_delta(x, y):
 results = []
 
 # Load datasets
-ai = pd.read_csv("csv/ts/pancake-frontend/cleaned_dataset_AI.csv")
-non_ai = pd.read_csv("csv/ts/pancake-frontend/cleaned_dataset_nonAI.csv")
+ai = pd.read_csv("csv/cs/Chatdollkit/cleaned_dataset_AI.csv")
+non_ai = pd.read_csv("csv/cs/Chatdollkit/cleaned_dataset_nonAI.csv")
 
 # Basic metrics
 metrics = ["files", "deletions", "insertions", "lines"]
@@ -63,8 +63,8 @@ results.append({
 })
 
 # Cyclomatic Complexity
-cc_ai = pd.read_csv("csv/ts/pancake-frontend/cc_results_AI.csv")
-cc_non_ai = pd.read_csv("csv/ts/pancake-frontend/cc_results_nonAI.csv")
+cc_ai = pd.read_csv("csv/cs/Chatdollkit/cc_results_AI.csv")
+cc_non_ai = pd.read_csv("csv/cs/Chatdollkit/cc_results_nonAI.csv")
 
 for metric in ["delta_cc", "delta_cc_norm"]:
     stat, p = mannwhitneyu(cc_ai[metric], cc_non_ai[metric], alternative="two-sided")
@@ -77,5 +77,5 @@ for metric in ["delta_cc", "delta_cc_norm"]:
     })
 
 results_df = pd.DataFrame(results)
-results_df.to_csv("csv/ts/pancake-frontend/statistical_results_complexity.csv", index=False)
-print("Saved statistical results to csv/ts/pancake-frontend/statistical_results_complexity.csv")
+results_df.to_csv("csv/cs/Chatdollkit/statistical_results_complexity.csv", index=False)
+print("Saved statistical results to csv/cs/Chatdollkit/statistical_results_complexity.csv")

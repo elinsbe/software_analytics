@@ -1,0 +1,3 @@
+metric,AI_ratio,nonAI_ratio,risk_difference,odds_ratio,fisher_p,AI_mean,nonAI_mean,U_stat,p_value,cliffs_delta
+reverted_commits,0.0,0.0,0.0,,1.0,,,,,
+changes_in_30_days,,,,,,7.6923076923076925,6.177570093457944,1339.5,0.7624465807545421,-0.03702372393961179

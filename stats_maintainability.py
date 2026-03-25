@@ -3,8 +3,8 @@ import numpy as np
 from scipy.stats import fisher_exact, mannwhitneyu
 
 # Load AI / non-AI datasets
-ai = pd.read_csv("csv/ts/pancake-frontend/cleaned_dataset_AI.csv")
-non_ai = pd.read_csv("csv/ts/pancake-frontend/cleaned_dataset_nonAI.csv")
+ai = pd.read_csv("csv/cs/Chatdollkit/cleaned_dataset_AI.csv")
+non_ai = pd.read_csv("csv/cs/Chatdollkit/cleaned_dataset_nonAI.csv")
 
 # Cliff's delta
 def cliffs_delta(x, y):
@@ -57,6 +57,6 @@ results.append({
 
 # Save results
 results_df = pd.DataFrame(results)
-results_df.to_csv("csv/ts/pancake-frontend/statistical_results_maintainability.csv", index=False)
+results_df.to_csv("csv/cs/Chatdollkit/statistical_results_maintainability.csv", index=False)
 
-print("Saved statistical results to csv/ts/pancake-frontend/statistical_results_maintainability.csv")
+print("Saved statistical results to csv/cs/Chatdollkit/statistical_results_maintainability.csv")
