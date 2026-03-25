@@ -1,41 +1,52 @@
 import subprocess
 import pandas as pd
 import numpy as np
+import tempfile
+import git
+import os
 
-DATASET_PATH = "reports/pancake-frontend/cleaned_dataset_nonAI.csv" 
-OUTPUT_PATH = "cc_results_nonAI.csv"
+# use cleaned_dataset_AI.csv to get results for the AI commits
+# use cleaned_dataset_nonAI.csv to get results for the human-written commits
+DATASET_PATH = "csv/ts/pancake-frontend/cleaned_dataset_AI.csv"
+OUTPUT_PATH = "csv/ts/pancake-frontend/cc_results_AI.csv"
+REPO_URL = "https://github.com/pancakeswap/pancake-frontend"
 
 INCLUDE_EXT = ".ts"
 EXCLUDE_PATTERNS = [".test.ts", ".d.ts"]
 
-def run_cmd(cmd):
-    result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+
+def run_cmd(cmd, cwd=None):
+    result = subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=cwd)
     return result.stdout.strip(), result.stderr.strip()
+
 
 def is_valid_ts_file(file):
     if not file.endswith(INCLUDE_EXT):
         return False
-    for pattern in EXCLUDE_PATTERNS:
-        if pattern in file:
-            return False
-    return True
+    return not any(p in file for p in EXCLUDE_PATTERNS)
 
-def get_modified_ts_files(commit):
+
+def get_modified_ts_files(commit, cwd):
     cmd = f"git diff --name-only {commit}^ {commit}"
-    out, _ = run_cmd(cmd)
+    out, _ = run_cmd(cmd, cwd=cwd)
     files = out.split("\n") if out else []
     return [f for f in files if is_valid_ts_file(f)]
 
-def checkout(commit):
-    run_cmd(f"git checkout -f {commit}")
 
-def run_lizard(files):
+def run_lizard(files, cwd):
     if not files:
         return []
 
-    files_str = " ".join(files)
+    existing_files = [
+        f for f in files if os.path.exists(os.path.join(cwd, f))
+    ]
+
+    if not existing_files:
+        return []
+
+    files_str = " ".join(existing_files)
     cmd = f"python3 -m lizard {files_str}"
-    out, err = run_cmd(cmd)
+    out, _ = run_cmd(cmd, cwd=cwd)
 
     cc_values = []
 
@@ -50,31 +61,32 @@ def run_lizard(files):
 
     return cc_values
 
+
 def compute_avg(cc_list):
     return float(np.mean(cc_list)) if cc_list else 0.0
 
-def process_commit(commit, insertions, deletions):
+
+def process_commit(commit, insertions, deletions, repo_dir):
     print(f"Processing {commit}...")
 
-    files = get_modified_ts_files(commit)
+    files = get_modified_ts_files(commit, repo_dir)
 
     if not files:
         return None
 
     # BEFORE
-    checkout(f"{commit}^")
-    cc_before_list = run_lizard(files)
+    run_cmd(f"git checkout {commit}^", cwd=repo_dir)
+    cc_before_list = run_lizard(files, repo_dir)
     n_before = len(cc_before_list)
     cc_before = compute_avg(cc_before_list)
 
     # AFTER
-    checkout(commit)
-    cc_after_list = run_lizard(files)
+    run_cmd(f"git checkout {commit}", cwd=repo_dir)
+    cc_after_list = run_lizard(files, repo_dir)
     n_after = len(cc_after_list)
     cc_after = compute_avg(cc_after_list)
 
     if n_before == 0 and n_after == 0:
-        print(f"Skipping {commit} (no functions found)")
         return None
 
     delta_cc = cc_after - cc_before
@@ -91,28 +103,31 @@ def process_commit(commit, insertions, deletions):
         "n_functions_after": n_after
     }
 
+
 def main():
     df = pd.read_csv(DATASET_PATH)
     results = []
 
-    for _, row in df.iterrows():
-        commit = row["hash"]
-        insertions = row.get("insertions", 0)
-        deletions = row.get("deletions", 0)
+    with tempfile.TemporaryDirectory() as temp_dir:
+        print("Cloning repo...")
+        git.Repo.clone_from(REPO_URL, temp_dir, multi_options=["--filter=blob:none"])
 
-        try:
-            res = process_commit(commit, insertions, deletions)
-            if res:  # only append commits with at least one function
-                results.append(res)
-        except Exception as e:
-            print(f"Error processing {commit}: {e}")
+        for _, row in df.iterrows():
+            commit = row["hash"]
+            insertions = row.get("insertions", 0)
+            deletions = row.get("deletions", 0)
 
-    # Restore branch
-    checkout("develop")
+            try:
+                res = process_commit(commit, insertions, deletions, temp_dir)
+                if res:
+                    results.append(res)
+            except Exception as e:
+                print(f"Error processing {commit}: {e}")
 
     out_df = pd.DataFrame(results)
     out_df.to_csv(OUTPUT_PATH, index=False)
     print(f"Saved results to {OUTPUT_PATH}")
+
 
 if __name__ == "__main__":
     main()
