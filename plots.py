@@ -235,6 +235,31 @@ def reverted_commits(df_ai, df_no_ai, path):
     plt.clf()
 
 
+def cc_plots(df_ai, df_no_ai, path):
+    mean_value_AI = df_ai["delta_cc_norm"].mean()
+    mean_value_NO_AI = df_no_ai["delta_cc_norm"].mean()
+
+    print(f"Mean_value of AI for CC: {mean_value_AI}")
+    print(f"Mean_value of NON AI for CC: {mean_value_NO_AI}")
+
+    with open(f"{path}summary.txt", "a") as f:
+        f.write(f"Mean_value of AI for CC:: {mean_value_AI}\n")
+        f.write(f"Mean_value of NON AI for CC: {mean_value_NO_AI}\n")
+        f.write("\n \n")
+        f.close()
+
+    data = [df_ai["delta_cc_norm"].dropna(), df_no_ai["delta_cc_norm"].dropna()]
+
+    plt.violinplot(data, showmeans=True)
+
+    plt.xticks([1, 2], ["AI", "Non-AI"])
+    plt.ylabel("Cyclomatic Complexity")
+    plt.title("Distribution of Cyclomatic Complexity")
+
+    plt.savefig(f"{path}/cc.png")
+    plt.clf()
+
+
 def failed_pipelines(df_ai, df_no_ai, path):
     count_ai = df_ai["failed_pipeline"].sum()
     count_no_ai = df_no_ai["failed_pipeline"].sum()
@@ -288,6 +313,13 @@ def main():
             changes_in_30_days(df_ai=df_ai, df_no_ai=df_no_ai, path=output_path)
             duplication(df_ai=df_ai, df_no_ai=df_no_ai, path=output_path)
             files(df_ai=df_ai, df_no_ai=df_no_ai, path=output_path)
+
+            path_ai = f"csv/{language}/{repos}/cc_results_AI.csv"
+            path_no_ai = f"csv/{language}/{repos}/cc_results_nonAI.csv"
+            df_ai = pd.read_csv(path_ai)
+            df_no_ai = pd.read_csv(path_no_ai)
+
+            cc_plots(df_ai=df_ai, df_no_ai=df_no_ai, path=output_path)
 
 
 if __name__ == "__main__":

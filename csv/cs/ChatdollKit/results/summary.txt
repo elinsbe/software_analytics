@@ -34,3 +34,7 @@ Mean_value of AI for files changed: 1.9615384615384615
 Mean_value of NON AI for files changed: 60.78504672897196
 
  
+Mean_value of AI for CC:: 0.012333003930480636
+Mean_value of NON AI for CC: 0.013774903538382057
+
+ 
