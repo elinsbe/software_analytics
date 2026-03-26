@@ -26,8 +26,8 @@ Mean_value of AI for # of changes in 30 days: 7.6923076923076925
 Mean_value of non AI for # of changes in 30 days: 6.177570093457944
 
  
-Mean value of code duplication for AI: 0.0
-Mean value of code duplication for non-AI: 0.0
+Mean value of code duplication for AI: 1.1753846153846155
+Mean value of code duplication for non-AI: 0.3042990654205607
 
  
 Mean_value of AI for files changed: 1.9615384615384615
