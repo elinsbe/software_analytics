@@ -33,6 +33,7 @@ FINAL_COLUMNS = [
 def get_ai_commits(repo_name: str):
     # these columns are in the original dataset, but not needed for out analysis so that are removed.
     print(f"Getting all commits from research dataset for repo: {repo_name}")
+    repo_name = repo_name.lower()
     unwanted_colums_in_original = [
         "branch",
         "committer",
